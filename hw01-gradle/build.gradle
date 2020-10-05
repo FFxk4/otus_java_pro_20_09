@@ -4,7 +4,7 @@ plugins {
 }
 
 dependencies {
-    compile group: 'com.google.guava', name: 'guava', version: '29.0-jre'
+    implementation('com.google.guava:guava:29.0-jre')
 }
 
 shadowJar {
