@@ -1,2 +1,3 @@
 # Project exclude paths
 /.gradle/
+/hw01-gradle/build/
