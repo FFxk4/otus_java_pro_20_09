@@ -1,6 +1,8 @@
 plugins {
-    //support Idea IDE
+    id 'java'
     id 'idea'
+    //full jar plug-in
+    id 'com.github.johnrengelman.shadow' version '5.2.0' apply false
 }
 
 idea {
