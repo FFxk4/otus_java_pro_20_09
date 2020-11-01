@@ -2,3 +2,6 @@
 /.gradle/
 /.idea/
 /hw01-gradle/build/
+/hw02-gradle/build/
+/hw01-gradle/out/
+/hw02-gradle/out/
