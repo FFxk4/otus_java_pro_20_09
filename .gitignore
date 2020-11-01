@@ -1,3 +1,4 @@
 # Project exclude paths
 /.gradle/
+/.idea/
 /hw01-gradle/build/
