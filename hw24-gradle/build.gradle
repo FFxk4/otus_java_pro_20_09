@@ -1,0 +1,20 @@
+plugins {
+    id 'java'
+}
+
+group 'ru.otus'
+
+sourceCompatibility = JavaVersion.VERSION_13
+targetCompatibility = JavaVersion.VERSION_13
+
+dependencies {
+    implementation('org.reflections:reflections:0.9.12')
+}
+
+compileJava.options.encoding = 'UTF-8'
+
+tasks.withType(JavaCompile) {
+    options.with {
+        encoding = 'UTF-8'
+    }
+}
