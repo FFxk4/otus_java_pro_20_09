@@ -1,11 +1,14 @@
 package ru.otus.appcontainer;
 
+import org.reflections.Reflections;
+import org.reflections.scanners.SubTypesScanner;
+import org.reflections.scanners.TypeAnnotationsScanner;
+import org.reflections.util.ClasspathHelper;
+import org.reflections.util.ConfigurationBuilder;
 import ru.otus.appcontainer.api.AppComponent;
 import ru.otus.appcontainer.api.AppComponentsContainer;
 import ru.otus.appcontainer.api.AppComponentsContainerConfig;
-import ru.otus.config.AppConfig;
 
-import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
@@ -29,15 +32,15 @@ public class AppComponentsContainerImpl implements AppComponentsContainer {
 		processSeveralConfigs(asList(configClasses));
 	}
 
-	public AppComponentsContainerImpl(String packageName) {
-		//processConfig(initialConfigClass); //todo
+	public AppComponentsContainerImpl(String configLocationPackageName) {
+		processByReflectionsApiConfig(configLocationPackageName);
 	}
 
 	@Override
 	public <C> C getAppComponent(Class<C> componentClass) {
 		for (Object element : appComponents) {
-			Class<?> elementClass = element.getClass();
-			List<Class<?>> elementInterfaces = asList(elementClass.getInterfaces());
+			var elementClass = element.getClass();
+			var elementInterfaces = asList(elementClass.getInterfaces());
 			if (elementClass.equals(componentClass) || elementInterfaces.contains(componentClass)) {
 				return (C) element;
 			}
@@ -58,9 +61,9 @@ public class AppComponentsContainerImpl implements AppComponentsContainer {
 	private void processConfig(Class<?> configClass) {
 		checkConfigClass(configClass);
 		// You code here...
-		var configClassMethods = getFilteredAndOrderedMethods(configClass);
+		var orderedClassMethods = getFilteredAndOrderedMethods(configClass);
 		var methodsToClassBinding = matchMethodsToConfigClass(configClass);
-		loadComponentsToContainer(configClassMethods, methodsToClassBinding);
+		loadComponentsToContainer(orderedClassMethods, methodsToClassBinding);
 	}
 
 	private void checkConfigClass(Class<?> configClass) {
@@ -88,16 +91,16 @@ public class AppComponentsContainerImpl implements AppComponentsContainer {
 			var loadedParameters = new ArrayList<>();
 			if (parameters.length > 0) {
 				for (Parameter p : parameters) {
-					String parameterName = p.getType().getSimpleName();
-					Object component = getAppComponent(parameterName);
+					var parameterName = p.getType().getSimpleName();
+					var component = getAppComponent(parameterName);
 					loadedParameters.add(component);
 				}
 			}
-			Object result = new Object();
-			Class<?> configClass = methodsToClassBinding.get(method);
+			var result = new Object();
+			var configClass = methodsToClassBinding.get(method);
 
 			try {
-				Constructor<?>[] constructors = configClass.getConstructors();
+				var constructors = configClass.getConstructors();
 				//result = m.invoke(new AppConfig(), loadedParameters.toArray());
 				result = method.invoke(constructors[0].newInstance(), loadedParameters.toArray());
 			} catch (InvocationTargetException | IllegalAccessException | InstantiationException e) {
@@ -110,7 +113,7 @@ public class AppComponentsContainerImpl implements AppComponentsContainer {
 	}
 
 	private void processSeveralConfigs(List<Class<?>> configClassList) {
-		var fulfilledConfigMethods = new ArrayList<Method>();
+		var orderedConfigMethods = new ArrayList<Method>();
 		var orderedConfigClasses = new TreeMap<Integer, Class<?>>();
 		var methodsToClassBinding = new HashMap<Method, Class<?>>();
 		for (Class<?> configClass : configClassList) {
@@ -120,10 +123,10 @@ public class AppComponentsContainerImpl implements AppComponentsContainer {
 			methodsToClassBinding.putAll(matchMethodsToConfigClass(configClass));
 		}
 		for (Class<?> configClass : orderedConfigClasses.values()) {
-			var partConfigClassMethods = getFilteredAndOrderedMethods(configClass);
-			fulfilledConfigMethods.addAll(partConfigClassMethods);
+			var partOfConfigClassMethods = getFilteredAndOrderedMethods(configClass);
+			orderedConfigMethods.addAll(partOfConfigClassMethods);
 		}
-		loadComponentsToContainer(fulfilledConfigMethods, methodsToClassBinding);
+		loadComponentsToContainer(orderedConfigMethods, methodsToClassBinding);
 	}
 
 	private HashMap<Method, Class<?>> matchMethodsToConfigClass(Class<?> configClass) {
@@ -137,5 +140,21 @@ public class AppComponentsContainerImpl implements AppComponentsContainer {
 			methodsByClass.put(method, configClass);
 		}
 		return methodsByClass;
+	}
+
+	private void processByReflectionsApiConfig(String packageName) {
+		var reflections = new Reflections(
+								new ConfigurationBuilder()
+									.setUrls(ClasspathHelper.forPackage(packageName))
+									.setScanners(new SubTypesScanner(), new TypeAnnotationsScanner()));
+
+		var annotated = reflections.getTypesAnnotatedWith(AppComponentsContainerConfig.class);
+
+		switch (annotated.size()) {
+			case 0  : throw new IllegalArgumentException(
+						String.format("No configs found at \"%s\" package", packageName));
+			case 1  : processConfig(annotated.iterator().next());
+			default : processSeveralConfigs(new ArrayList<>(annotated));
+		}
 	}
 }
