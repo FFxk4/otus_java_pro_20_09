@@ -48,23 +48,17 @@ public class AppComponentsContainerImpl implements AppComponentsContainer {
 	}
 
 private void processConfig(List<Class<?>> configClassList) throws ReflectiveOperationException {
-
-	var methodsToClassBinding = new HashMap<Method, Class<?>>();
 	var orderedConfigMethods = new ArrayList<Method>();
-
 	configClassList.sort(Comparator.comparingInt(config -> config.getDeclaredAnnotation(AppComponentsContainerConfig.class).order()));
 	configClassList.forEach(config -> {
 		checkConfigClass(config);
-		var methods
-			= Arrays.stream(config.getDeclaredMethods())
+		orderedConfigMethods
+			.addAll(Arrays.stream(config.getDeclaredMethods())
 				.filter(method -> method.isAnnotationPresent(AppComponent.class))
 				.sorted(Comparator.comparingInt(method -> method.getDeclaredAnnotation(AppComponent.class).order()))
-				.collect(Collectors.toList());
-		methods.forEach(method -> methodsToClassBinding.put(method, config));
-		orderedConfigMethods.addAll(methods);
+				.collect(Collectors.toList()));
 	});
-
-	loadComponentsToContainer(orderedConfigMethods, methodsToClassBinding);
+	loadComponentsToContainer(orderedConfigMethods);
 }
 
 	private void checkConfigClass(Class<?> configClass) {
@@ -73,24 +67,25 @@ private void processConfig(List<Class<?>> configClassList) throws ReflectiveOper
 		}
 	}
 
-	private void loadComponentsToContainer(List<Method> configClassMethods, Map<Method, Class<?>> methodsToClassBinding) throws ReflectiveOperationException{
+	private void loadComponentsToContainer(List<Method> configClassMethods) throws ReflectiveOperationException{
 		for (Method method : configClassMethods) {
-			var parameters = method.getParameters();
-			var loadedParameters = new ArrayList<>();
-			if (parameters.length > 0) {
-				for (Parameter p : parameters) {
-					var parameterName = p.getType().getSimpleName();
-					var component = getAppComponent(parameterName);
-					loadedParameters.add(component);
-				}
-			}
-			var configClass = methodsToClassBinding.get(method);
-			var constructors = configClass.getConstructors();
-			var result = method.invoke(constructors[0].newInstance(), loadedParameters.toArray());
+			var preparedComponentParameters = prepareComponentParameters(method.getParameters());
+			var methodClassInstance = method.getDeclaringClass().getConstructors()[0].newInstance();
+			var result = method.invoke(methodClassInstance, preparedComponentParameters);
 			var appComponent = method.getDeclaredAnnotation(AppComponent.class);
 			appComponentsByName.put(appComponent.name().toLowerCase(), result);
 			appComponents.add(result);
 		}
+	}
+
+	private Object[] prepareComponentParameters(Parameter[] parameters) {
+		var loadedComponentParameters = new ArrayList<>();
+		for (Parameter p : parameters) {
+			var parameterName = p.getType().getSimpleName();
+			var component = getAppComponent(parameterName);
+			loadedComponentParameters.add(component);
+		}
+		return loadedComponentParameters.toArray();
 	}
 
 	private void processByReflectionsApiConfig(String packageName) throws ReflectiveOperationException {
