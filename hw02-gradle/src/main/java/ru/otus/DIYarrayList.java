@@ -219,7 +219,7 @@ public class DIYarrayList<E> implements List<E> {
 		@SuppressWarnings("unchecked")
 		public E next() {
 			if (!hasNext()) {
-				throw new IndexOutOfBoundsException();
+				throw new NoSuchElementException();
 			}
 			lastRet = currentIdx;
 			return (E) array[currentIdx++];
