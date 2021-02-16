@@ -1,6 +1,5 @@
 package ru.otus;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.hash.HashCode;
@@ -9,6 +8,7 @@ import com.google.common.hash.Hashing;
 import com.google.common.reflect.ClassPath;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 public class HelloOtus {
 
@@ -42,10 +42,9 @@ public class HelloOtus {
 
 	private static HashCode getGuavaHashCode(String join) {
 		HashFunction hashFunction = Hashing.murmur3_128();
-		HashCode hashCode = (HashCode) hashFunction.newHasher()
-			.putString(join, Charsets.UTF_8)
+		return hashFunction.newHasher()
+			.putString(join, StandardCharsets.UTF_8)
 			.hash();
-		return hashCode;
 	}
 
 	private static String getJoinString() {
