@@ -23,11 +23,11 @@ public class AppComponentsContainerImpl implements AppComponentsContainer {
 	private final List<Object> appComponents = new ArrayList<>();
 	private final Map<String, Object> appComponentsByName = new HashMap<>();
 
-	public AppComponentsContainerImpl(Class<?>... configClasses) throws ReflectiveOperationException  {
+	public AppComponentsContainerImpl(Class<?>... configClasses) throws ReflectiveOperationException {
 		processConfig(Arrays.asList(configClasses));
 	}
 
-	public AppComponentsContainerImpl(String configLocationPackageName) throws ReflectiveOperationException  {
+	public AppComponentsContainerImpl(String configLocationPackageName) throws ReflectiveOperationException {
 		processByReflectionsApiConfig(configLocationPackageName);
 	}
 
@@ -47,19 +47,19 @@ public class AppComponentsContainerImpl implements AppComponentsContainer {
 		return (C) appComponentsByName.get(componentName.toLowerCase());
 	}
 
-private void processConfig(List<Class<?>> configClassList) throws ReflectiveOperationException {
-	var orderedConfigMethods = new ArrayList<Method>();
-	configClassList.sort(Comparator.comparingInt(config -> config.getDeclaredAnnotation(AppComponentsContainerConfig.class).order()));
-	configClassList.forEach(config -> {
-		checkConfigClass(config);
-		orderedConfigMethods
-			.addAll(Arrays.stream(config.getDeclaredMethods())
-				.filter(method -> method.isAnnotationPresent(AppComponent.class))
-				.sorted(Comparator.comparingInt(method -> method.getDeclaredAnnotation(AppComponent.class).order()))
-				.collect(Collectors.toList()));
-	});
-	loadComponentsToContainer(orderedConfigMethods);
-}
+	private void processConfig(List<Class<?>> configClassList) throws ReflectiveOperationException {
+		var orderedConfigMethods = new ArrayList<Method>();
+		configClassList.sort(Comparator.comparingInt(config -> config.getDeclaredAnnotation(AppComponentsContainerConfig.class).order()));
+		configClassList.forEach(config -> {
+			checkConfigClass(config);
+			orderedConfigMethods
+				.addAll(Arrays.stream(config.getDeclaredMethods())
+					        .filter(method -> method.isAnnotationPresent(AppComponent.class))
+					        .sorted(Comparator.comparingInt(method -> method.getDeclaredAnnotation(AppComponent.class).order()))
+					        .collect(Collectors.toList()));
+		});
+		loadComponentsToContainer(orderedConfigMethods);
+	}
 
 	private void checkConfigClass(Class<?> configClass) {
 		if (!configClass.isAnnotationPresent(AppComponentsContainerConfig.class)) {
@@ -67,7 +67,7 @@ private void processConfig(List<Class<?>> configClassList) throws ReflectiveOper
 		}
 	}
 
-	private void loadComponentsToContainer(List<Method> configClassMethods) throws ReflectiveOperationException{
+	private void loadComponentsToContainer(List<Method> configClassMethods) throws ReflectiveOperationException {
 		for (Method method : configClassMethods) {
 			var preparedComponentParameters = prepareComponentParameters(method.getParameters());
 			var methodClassInstance = method.getDeclaringClass().getConstructors()[0].newInstance();
@@ -90,9 +90,9 @@ private void processConfig(List<Class<?>> configClassList) throws ReflectiveOper
 
 	private void processByReflectionsApiConfig(String packageName) throws ReflectiveOperationException {
 		var reflections = new Reflections(
-								new ConfigurationBuilder()
-									.setUrls(ClasspathHelper.forPackage(packageName))
-									.setScanners(new SubTypesScanner(), new TypeAnnotationsScanner()));
+							new ConfigurationBuilder()
+								.setUrls(ClasspathHelper.forPackage(packageName))
+								.setScanners(new SubTypesScanner(), new TypeAnnotationsScanner()));
 
 		var annotated = reflections.getTypesAnnotatedWith(AppComponentsContainerConfig.class);
 		processConfig(new ArrayList<>(annotated));
